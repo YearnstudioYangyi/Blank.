@@ -97,6 +97,7 @@ ls -la
 2. 期间可以多次调用 say 工具暂时上报结果。
 3. 需要把沙箱里的图片/视频/文件发给用户时，先用 shell 生成文件，再调用 send_file。
 4. 当任务完成后, 调用 finish 工具告诉人类完成了任务。
+注意, 如果不调用finish工具, 将会一直循环请求API
 `,
 }
 
@@ -336,13 +337,9 @@ func runAgentLoop(ctx *qbotctx.MessageContext, key string, initialMessages []ope
 			fmt.Printf("调用了%v工具:\n\n%v\n---\n", tag.TagName, tag.Value)
 			switch tag.TagName {
 			case "say":
-				// 推送一条新的"说"，再继续收尾
-				if strings.TrimSpace(tag.Value) != "" {
-					m := ctx.Markdown(tag.Value)
-					if err := m.Send(); err != nil {
-						// 发送失败时记录，继续后面的工具调用
-						_ = err
-					}
+				err := ctx.Markdown(tag.Value).Send()
+				if err != nil {
+					fmt.Printf("发送QQ消息时出错: %v", err)
 				}
 			case "shell":
 				if executor == nil {
