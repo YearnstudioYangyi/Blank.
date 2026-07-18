@@ -1,0 +1,15 @@
+# AI 插件配置示例
+# 复制本文件为 ai.yaml 并按需修改，所有字段都可省略，缺省值见 plugins/ai/plugin.go 中的 defaultConfig。
+api_key: "sk-HdDo5M7hmJ8kZ12FXFippbAqkDQUY8As5ihRreJtmgMEjMTy"
+base_url: "http://server.yearnstudio.cn:13991/v1"
+model_id: "minimax-m3"
+
+# Docker 沙箱相关
+docker_image: "agent-runner"
+docker_container: "ai-bot-agent-runner"
+docker_memory_bytes: 4294967296   # 4 GiB
+docker_nano_cpus: 2000000000      # 2 CPU
+
+# 可选：覆盖默认 system_prompt
+# system_prompt: |
+#   你现在是一个QQ的AI机器人...

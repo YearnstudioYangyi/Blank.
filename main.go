@@ -4,12 +4,10 @@ import (
 	"Plrx/lib/config"
 	"Plrx/lib/constant"
 	"Plrx/lib/middleware"
-	"Plrx/lib/plugin"
 	"Plrx/lib/qqapi"
 	"Plrx/lib/requests"
 	"Plrx/lib/structers"
 	"Plrx/lib/templates"
-	_ "Plrx/plugins"
 	"bytes"
 	"crypto/ed25519"
 	"encoding/hex"
@@ -73,6 +71,5 @@ func main() {
 
 	log.Printf("Server running on %v", appConfig.Port)
 	log.Printf("注册了%v个Markdown模板", templates.GetMarkdownTemplateCount())
-	log.Printf("注册了%v个指令", plugin.GetCommandCount())
 	r.Run(fmt.Sprintf(":%v", appConfig.Port))
 }

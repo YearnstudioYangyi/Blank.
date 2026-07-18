@@ -7,16 +7,18 @@ import (
 
 type Context struct {
 	*MessageManager
+	*FileManager
 	Request *requests.Client
 }
 
-// 初始化Context对象及MessageManager对象
+// 初始化Context对象及MessageManager/FileManager对象
 func (context *Context) Init(messageId, eventId string, qqapi *qqapi.Client) {
 	context.MessageManager = &MessageManager{
 		MessageId: messageId,
 		EventId:   eventId,
 		Qapi:      qqapi,
 	}
+	context.FileManager = newFileManager(context.MessageManager)
 	context.Request = qqapi.Request
 }
 

@@ -85,6 +85,13 @@ func (c *Client) generateHeader() (map[string]string, error) {
 	return result, nil
 }
 
+// 富媒体上传结果
+type FileUploadResult struct {
+	FileUUID string `json:"file_uuid"`
+	FileInfo string `json:"file_info"`
+	TTL      int    `json:"ttl"`
+}
+
 // 发送群消息
 func (c *Client) SendGroupMessage(data []byte, groupId string) error {
 	// 获取请求头
@@ -112,6 +119,61 @@ func (c *Client) SendPrivateMessage(data []byte, userId string) error {
 		return err
 	}
 	return nil
+}
+
+func buildFileUploadBody(fileType int, url string, fileData string, fileName string) map[string]any {
+	body := map[string]any{
+		"file_type": fileType,
+	}
+	if url != "" {
+		body["url"] = url
+	}
+	if fileData != "" {
+		body["file_data"] = fileData
+	}
+	// file_data 上传时平台拿不到原始文件名，会显示「未命名」；需显式传 file_name
+	if fileName != "" {
+		body["file_name"] = fileName
+	}
+	return body
+}
+
+// 上传群聊富媒体
+func (c *Client) UploadGroupFile(groupId string, fileType int, url string, fileData string, fileName string) (*FileUploadResult, error) {
+	header, err := c.generateHeader()
+	if err != nil {
+		return nil, err
+	}
+	var result FileUploadResult
+	err = c.Request.Post(
+		fmt.Sprintf("%v/v2/groups/%v/files", c.ProxyAPI, groupId),
+		buildFileUploadBody(fileType, url, fileData, fileName),
+		&result,
+		header,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// 上传私聊富媒体
+func (c *Client) UploadPrivateFile(userId string, fileType int, url string, fileData string, fileName string) (*FileUploadResult, error) {
+	header, err := c.generateHeader()
+	if err != nil {
+		return nil, err
+	}
+	var result FileUploadResult
+	err = c.Request.Post(
+		fmt.Sprintf("%v/v2/users/%v/files", c.ProxyAPI, userId),
+		buildFileUploadBody(fileType, url, fileData, fileName),
+		&result,
+		header,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
 }
 
 // 回复回调按钮

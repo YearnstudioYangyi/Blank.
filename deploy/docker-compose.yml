@@ -1,0 +1,29 @@
+# Plrx (QBot Offical) 一键部署
+# 用法：
+#   1. 把 config.json / ai.yaml 放到 ./deploy/ 目录下
+#   2. docker compose up -d --build
+#   3. 在 QQ 开放平台把回调地址改成 http://<host>:37654/webhook
+
+services:
+  plrx:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: plrx:linux
+    container_name: plrx
+    restart: unless-stopped
+    ports:
+      - "37654:37654"   # 暴露给 QQ 开放平台的 webhook
+    volumes:
+      - ./deploy/config.json:/app/config.json:ro
+      - ./deploy/ai.yaml:/app/ai.yaml:ro
+      - /var/run/docker.sock:/var/run/docker.sock   # AI 沙箱容器需要操作宿主 docker
+    environment:
+      - GIN_MODE=release
+    healthcheck:
+      # Gin 没自带 healthz，用一个匿名监听端口的方式
+      # 简单办法：探活时 GET 一下根路径，框架目前对根路径返回 404 仍可视为进程在线
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:37654/ >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

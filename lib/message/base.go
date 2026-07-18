@@ -49,10 +49,14 @@ func (msg *Message) Send() error {
 	seq, err := msg.Count()
 	// 失败
 	if err != nil {
-		return err
+		// 使用主动推送
+		msg.MsgId = ""
+		msg.MsgSeq = 0
+		msg.initiativePush = true
+	} else {
+		// 设置消息编号
+		msg.MsgSeq = seq
 	}
-	// 设置消息编号
-	msg.MsgSeq = seq
 
 	// 解析消息
 	var data []byte

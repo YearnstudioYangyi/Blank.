@@ -72,6 +72,9 @@ func (k *Keyboard) AppendButton(id string, label string, visited string, style B
 		},
 		Id: id,
 	}
+	if k.Rows == nil {
+		k.Rows = make([]Buttons, 0)
+	}
 	// 补全长度
 	if len(k.Rows) <= row {
 		for len(k.Rows) != row+1 {
