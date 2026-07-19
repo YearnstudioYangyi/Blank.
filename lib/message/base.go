@@ -47,17 +47,24 @@ func (msg *Message) Send() error {
 		}
 	}
 	if !msg.initiativePush {
-		// 尝试增加计数
-		seq, err := msg.Count()
-		// 失败
-		if err != nil {
-			// 使用主动推送
+		if msg.MsgRef == nil {
+			// 无计数器时直接走主动推送
 			msg.MsgId = ""
 			msg.MsgSeq = 0
 			msg.initiativePush = true
 		} else {
-			// 设置消息编号
-			msg.MsgSeq = seq
+			// 尝试增加计数
+			seq, err := msg.Count()
+			// 失败
+			if err != nil {
+				// 使用主动推送
+				msg.MsgId = ""
+				msg.MsgSeq = 0
+				msg.initiativePush = true
+			} else {
+				// 设置消息编号
+				msg.MsgSeq = seq
+			}
 		}
 	}
 
@@ -103,6 +110,6 @@ func (msg *Message) Send() error {
 func (msg *Message) SetInitiativeMessage() {
 	msg.initiativePush = true
 	msg.MsgId = ""
+	msg.MsgSeq = 0
 	msg.MsgRef = nil
-	msg.msgSeq = 0
 }
