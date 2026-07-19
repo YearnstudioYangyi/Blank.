@@ -6,6 +6,7 @@ import (
 	"Plrx/lib/qqapi"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 )
 
@@ -84,13 +85,18 @@ func (msg *Message) Send() error {
 	// 匹配消息类型
 	switch msg.Target {
 	case constant.GroupMessage:
-		return msg.Qapi.SendGroupMessage(data, msg.GroupId)
+		err = msg.Qapi.SendGroupMessage(data, msg.GroupId)
 	case constant.PrivateMessage:
-		return msg.Qapi.SendPrivateMessage(data, msg.UserId)
+		err = msg.Qapi.SendPrivateMessage(data, msg.UserId)
 	default:
 		// TODO: 更换为类型
-		return fmt.Errorf("Unknown message target type: %v", msg.Target)
+		err = fmt.Errorf("Unknown message target type: %v", msg.Target)
 	}
+	if !msg.initiativePush && strings.Contains(err.Error(), "已过期") {
+		msg.SetInitiativeMessage()
+		return msg.Send()
+	}
+	return err
 }
 
 // 设置为主动推送消息
