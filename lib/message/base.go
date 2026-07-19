@@ -45,21 +45,24 @@ func (msg *Message) Send() error {
 			MessageId: msg.MsgId,
 		}
 	}
-	// 尝试增加计数
-	seq, err := msg.Count()
-	// 失败
-	if err != nil {
-		// 使用主动推送
-		msg.MsgId = ""
-		msg.MsgSeq = 0
-		msg.initiativePush = true
-	} else {
-		// 设置消息编号
-		msg.MsgSeq = seq
+	if !msg.initiativePush {
+		// 尝试增加计数
+		seq, err := msg.Count()
+		// 失败
+		if err != nil {
+			// 使用主动推送
+			msg.MsgId = ""
+			msg.MsgSeq = 0
+			msg.initiativePush = true
+		} else {
+			// 设置消息编号
+			msg.MsgSeq = seq
+		}
 	}
 
 	// 解析消息
 	var data []byte
+	var err error
 	// 如果有传入解析接口
 	if msg.MarshalInterface != nil {
 		data, err = msg.MarshalInterface.Marshal()
@@ -93,4 +96,7 @@ func (msg *Message) Send() error {
 // 设置为主动推送消息
 func (msg *Message) SetInitiativeMessage() {
 	msg.initiativePush = true
+	msg.MsgId = ""
+	msg.MsgRef = nil
+	msg.msgSeq = 0
 }
