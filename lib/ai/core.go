@@ -8,16 +8,19 @@ package ai
 
 import (
 	"Plrx/lib/buttons"
+	"Plrx/lib/config"
 	"Plrx/lib/constant"
 	"Plrx/lib/context"
 	qbotctx "Plrx/lib/context"
 	"Plrx/lib/message"
+	"Plrx/lib/searxng"
 	stdctx "context"
 	"fmt"
 	"os"
 	"path"
 	"strings"
 	"sync"
+	"time"
 
 	"Plrx/lib/ai/internal/docker_agent"
 	"Plrx/lib/ai/internal/response"
@@ -84,6 +87,11 @@ ls -la
    <send_file>
    /tmp/out.png
    </send_file>
+- 联网搜索: web_search (参数: 搜索关键词一行。返回: 标题/详情/链接列表，用于查事实、新闻、资料)
+   web_search工具示范:
+   <web_search>
+   Go context 超时最佳实践
+   </web_search>
 - 完成当前任务: finish (参数: 给用户的完成任务的说明, 额外说明: 当一轮任务结束后, 必须且仅能调用一次此工具)
 - 询问用户问题: ask (参数: 最多6行, 第一行为问题, 剩余为可选择的选项, 最多5个选项, 返回: 用户选择结果)
    ask工具示范:
@@ -394,6 +402,10 @@ func runAgentLoop(ctx *qbotctx.MessageContext, key string, initialMessages []ope
 					toolResults.WriteString("ok")
 				}
 				toolResults.WriteString("\n</send_file>\n")
+			case "web_search":
+				toolResults.WriteString("\n<web_search>\n")
+				toolResults.WriteString(runWebSearch(strings.TrimSpace(tag.Value)))
+				toolResults.WriteString("\n</web_search>\n")
 			case "finish":
 				finished = true
 				finishNotice = strings.TrimSpace(tag.Value)
@@ -476,6 +488,37 @@ func runAgentLoop(ctx *qbotctx.MessageContext, key string, initialMessages []ope
 // 实际工程里建议包一层超时控制。
 func bgCtx() stdctx.Context {
 	return stdctx.Background()
+}
+
+// runWebSearch 调用自部署 SearXNG，配置来自 config.json 的 searxng 段。
+func runWebSearch(query string) string {
+	if strings.TrimSpace(query) == "" {
+		return "错误: 搜索关键词为空"
+	}
+	cfg := config.Get()
+	base := strings.TrimSpace(cfg.SearXNG.BaseURL)
+	if base == "" {
+		// 若 main 尚未 InitConfig，尝试加载一次
+		cfg = config.InitConfig()
+		base = strings.TrimSpace(cfg.SearXNG.BaseURL)
+	}
+	if base == "" {
+		return "错误: 未配置 searxng.base_url（见 config.json）"
+	}
+	client := searxng.New(base)
+	if cfg.SearXNG.Limit > 0 {
+		client.Limit = cfg.SearXNG.Limit
+	}
+	if cfg.SearXNG.Language != "" {
+		client.Language = cfg.SearXNG.Language
+	}
+	ctx, cancel := stdctx.WithTimeout(bgCtx(), 20*time.Second)
+	defer cancel()
+	results, err := client.Search(ctx, query)
+	if err != nil {
+		return fmt.Sprintf("搜索失败: %v", err)
+	}
+	return searxng.FormatForAgent(results)
 }
 
 // 从 Docker 沙箱读取文件并发送给当前会话用户/群
