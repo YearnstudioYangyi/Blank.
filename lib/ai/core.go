@@ -39,6 +39,8 @@ type AgentConfig struct {
 	SystemPrompt string `yaml:"system_prompt"`
 }
 
+var pendingTools []string = make([]string, 0)
+
 // 默认配置（当 ai.yaml 缺失时退回到这套）。
 var defaultConfig = AgentConfig{
 	APIKey:      "",
@@ -300,7 +302,7 @@ func runAgentLoop(ctx *qbotctx.MessageContext, key string, initialMessages []ope
 	messages := append([]openai.ChatCompletionMessageParamUnion{}, initialMessages...)
 
 	cfg := loadAgentConfig()
-	const maxRounds = 50
+	const maxRounds = 150
 	stop := false
 	pause := false
 	for round := 0; round < maxRounds && !stop; round++ {
@@ -335,8 +337,32 @@ func runAgentLoop(ctx *qbotctx.MessageContext, key string, initialMessages []ope
 		toolResults.WriteString("[System Response]\n")
 		for _, tag := range response.GetResults() {
 			fmt.Printf("调用了%v工具:\n\n%v\n---\n", tag.TagName, tag.Value)
+			pendingTools = append(
+				pendingTools,
+				fmt.Sprintf("%s: %s", tag.TagName, strings.Split(tag.Value, " ")[0]),
+			)
+			if len(pendingTools) > 10 {
+				var result strings.Builder
+				result.Write([]byte("已调用工具\n```bash"))
+				for _, v := range pendingTools {
+					result.Write(fmt.Appendf(nil, "\n- bash %v", v))
+				}
+				result.Write([]byte("\n```"))
+				ctx.Markdown(result.String()).Send()
+				pendingTools = make([]string, 0)
+			}
 			switch tag.TagName {
 			case "say":
+				if len(pendingTools) > 0 {
+					var result strings.Builder
+					result.Write([]byte("已调用工具\n```bash"))
+					for _, v := range pendingTools {
+						result.Write(fmt.Appendf(nil, "\n- bash %v", v))
+					}
+					result.Write([]byte("\n```"))
+					ctx.Markdown(result.String()).Send()
+					pendingTools = make([]string, 0)
+				}
 				err := ctx.Markdown(tag.Value).Send()
 				if err != nil {
 					fmt.Printf("发送QQ消息时出错: %v", err)
