@@ -92,7 +92,7 @@ func (msg *Message) Send() error {
 		// TODO: 更换为类型
 		err = fmt.Errorf("Unknown message target type: %v", msg.Target)
 	}
-	if !msg.initiativePush && strings.Contains(err.Error(), "已过期") {
+	if !msg.initiativePush && err != nil && strings.Contains(err.Error(), "已过期") {
 		msg.SetInitiativeMessage()
 		return msg.Send()
 	}
